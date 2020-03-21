@@ -51,7 +51,7 @@ class GetAddNews(object):
                     article_title = data["title"]
                     article_summary = data["summary"]
                     article_link = data["link"]
-                    t = data["timestamp"]
+                    t = data["time"]
 
                     tc = TwitterCard(article_link, ["twitter:image"])
                     if(tc.image is None):
@@ -69,7 +69,7 @@ class GetAddNews(object):
                     else:
                         img = tc.image
 
-                    fin_dict = {"title": article_title, "summary": article_summary, "link": article_link, "source": source, "image": img, "timestamp": t}
+                    fin_dict = {"title": article_title, "summary": article_summary, "link": article_link, "source": source, "image": img, "time": t}
 
                     final_q.put(fin_dict)
         except Exception as e:

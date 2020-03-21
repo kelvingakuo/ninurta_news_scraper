@@ -1,6 +1,6 @@
 import feedparser
 from webpreview import TwitterCard, web_preview
-import time
+import datetime
 import threading
 from queue import Queue
 import pprint
@@ -13,6 +13,10 @@ class GetAddNews(object):
         self.standard_agrix = "https://www.standardmedia.co.ke/rss/agriculture.php"
         self.standard_biz = "https://www.standardmedia.co.ke/rss/business.php"
         self.business_daily = "https://www.businessdailyafrica.com/539444-539444-view-asFeed-bfdflfz/index.xml"
+        now = datetime.datetime.now()
+        self.year = now.year
+        self.month = now.month
+        self.day = now.day
 
 
     def _write_to_dynamo_from_queue(self, final_q):
@@ -23,9 +27,11 @@ class GetAddNews(object):
                 data = final_q.get(block = True)
                 if(data is None):
                     work = False
+                    # Notify Caesar Lambda
                     return
                 else:
                     pprint.pprint(data)
+                    # Write to SQLLite db
         except Exception as e:
             raise RuntimeError(e)
 
@@ -88,19 +94,19 @@ class GetAddNews(object):
         agrix_content = feedparser.parse(self.standard_agrix)
         for entry in agrix_content["entries"]:
             title, summary, link = self._get_article_info(entry)
-            article_dict = {"title": title, "summary": summary, "link": link, "source": "standard_agrix", "timestamp": time.time()}
+            article_dict = {"title": title, "summary": summary, "link": link, "source": "standard_agrix", "time": {"year": self.year, "month": self.month, "day": self.day}}
             self.articles_queue.put(article_dict)
 
         business_content = feedparser.parse(self.standard_biz)
         for entry in business_content["entries"]:
             title, summary, link = self._get_article_info(entry)
-            article_dict = {"title": title, "summary": summary, "link": link, "source": "standard_biz", "timestamp": time.time()}
+            article_dict = {"title": title, "summary": summary, "link": link, "source": "standard_biz", "time": {"year": self.year, "month": self.month, "day": self.day}}
             self.articles_queue.put(article_dict)
 
         business_daily = feedparser.parse(self.business_daily)
         for entry in business_daily["entries"]:
             title, summary, link = self._get_article_info(entry)
-            article_dict = {"title": title, "summary": summary, "link": link, "source": "business_daily", "timestamp": time.time()}
+            article_dict = {"title": title, "summary": summary, "link": link, "source": "business_daily", "time": {"year": self.year, "month": self.month, "day": self.day}}
             self.articles_queue.put(article_dict)
 
         

@@ -1,24 +1,111 @@
-# This is a template for a Python scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
+import feedparser
+from webpreview import TwitterCard, web_preview
+import time
+import threading
+from queue import Queue
+import pprint
 
-# import scraperwiki
-# import lxml.html
-#
-# # Read in a page
-# html = scraperwiki.scrape("http://foo.com")
-#
-# # Find something on the page using css selectors
-# root = lxml.html.fromstring(html)
-# root.cssselect("div[align='left']")
-#
-# # Write out to the sqlite database using scraperwiki library
-# scraperwiki.sqlite.save(unique_keys=['name'], data={"name": "susan", "occupation": "software developer"})
-#
-# # An arbitrary query against the database
-# scraperwiki.sql.select("* from data where 'name'='peter'")
 
-# You don't have to do things with the ScraperWiki and lxml libraries.
-# You can use whatever libraries you want: https://morph.io/documentation/python
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
+class GetAddNews(object):
+    def __init__(self):
+        self.articles_queue = Queue()
+        self.full_article_queue = Queue()
+        self.standard_agrix = "https://www.standardmedia.co.ke/rss/agriculture.php"
+        self.standard_biz = "https://www.standardmedia.co.ke/rss/business.php"
+        self.business_daily = "https://www.businessdailyafrica.com/539444-539444-view-asFeed-bfdflfz/index.xml"
+
+
+    def _write_to_dynamo_from_queue(self, final_q):
+        try:
+            work = True
+            
+            while work:
+                data = final_q.get(block = True)
+                if(data is None):
+                    work = False
+                    return
+                else:
+                    pprint.pprint(data)
+        except Exception as e:
+            raise RuntimeError(e)
+
+    def _get_article_image(self, article_q, final_q):
+        """ Gets article link and other info, then gets URL for that article image
+        """
+        try:
+            work = True
+            while work:
+                data = article_q.get(block = True)
+                if(data is None):
+                    work = False
+                    final_q.put(None)
+                    return
+                else:
+                    source = data["source"]
+                    article_title = data["title"]
+                    article_summary = data["summary"]
+                    article_link = data["link"]
+                    t = data["timestamp"]
+
+                    tc = TwitterCard(article_link, ["twitter:image"])
+                    if(tc.image is None):
+                        _, _, image = web_preview(article_link, parser = "html.parser")
+                        if(image is None):
+                            if(source == "standard_agrix"):
+                                img = "https://www.farmers.co.ke/assets/images/logo.png"
+                            elif(source == "standard_biz"):
+                                img = "https://www.standardmedia.co.ke/common/i/standard-digital-world-inner-page.png"
+                            elif(source == "business_daily"):
+                                img = "https://www.businessdailyafrica.com/image/view/-/3818190/medRes/1349497/-/3ijc6bz/-/logoNew.png"
+                        else:
+                            img = image
+
+                    else:
+                        img = tc.image
+
+                    fin_dict = {"title": article_title, "summary": article_summary, "link": article_link, "source": source, "image": img, "timestamp": t}
+
+                    final_q.put(fin_dict)
+        except Exception as e:
+            raise RuntimeError(e) 
+
+    def _get_article_info(self, article):
+        """ Gets a feedparse entry object then extracts info
+        """
+        article_title = article["title"]
+        article_summary = article["summary"]
+        article_link = article["link"]
+
+        return article_title, article_summary, article_link
+
+    def get_articles(self):
+        img_thread = threading.Thread(target = self._get_article_image, args = (self.articles_queue, self.full_article_queue, ))
+        img_thread.start()
+
+        writer_thread = threading.Thread(target = self._write_to_dynamo_from_queue, args = (self.full_article_queue, ))
+        writer_thread.start()
+
+        agrix_content = feedparser.parse(self.standard_agrix)
+        for entry in agrix_content["entries"]:
+            title, summary, link = self._get_article_info(entry)
+            article_dict = {"title": title, "summary": summary, "link": link, "source": "standard_agrix", "timestamp": time.time()}
+            self.articles_queue.put(article_dict)
+
+        business_content = feedparser.parse(self.standard_biz)
+        for entry in business_content["entries"]:
+            title, summary, link = self._get_article_info(entry)
+            article_dict = {"title": title, "summary": summary, "link": link, "source": "standard_biz", "timestamp": time.time()}
+            self.articles_queue.put(article_dict)
+
+        business_daily = feedparser.parse(self.business_daily)
+        for entry in business_daily["entries"]:
+            title, summary, link = self._get_article_info(entry)
+            article_dict = {"title": title, "summary": summary, "link": link, "source": "business_daily", "timestamp": time.time()}
+            self.articles_queue.put(article_dict)
+
+        
+        self.articles_queue.put(None)
+        
+
+if __name__ == "__main__":
+    GetAddNews().get_articles()

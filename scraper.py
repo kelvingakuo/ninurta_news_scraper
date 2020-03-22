@@ -20,7 +20,7 @@ class GetAddNews(object):
         self.day = now.day
         conn = apsw.Connection("data.sqlite")
         self.cursor = conn.cursor()
-        self.cursor.execute("CREATE TABLE data (id INT NOT NULL PRIMARY KEY AUTO INCREMENT, image VARCHAR(100), link VARCHAR(100), source VARCHAR(30), summary VARCHAR(300), title VARCHAR(100), year INT, month INT, day INT)")
+        self.cursor.execute("CREATE TABLE data (id INT NOT NULL AUTO_INCREMENT, image VARCHAR(100), link VARCHAR(100), source VARCHAR(30), summary VARCHAR(300), title VARCHAR(100), year INT, month INT, day INT, PRIMARY KEY (id))")
 
 
     def _write_to_dynamo_from_queue(self, final_q):

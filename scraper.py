@@ -34,7 +34,7 @@ class GetAddNews(object):
                     # Notify Caesar Lambda
                     return
                 else:
-                    self.cursor.execute(f"INSERT INTO data (image, link, source, summary, title, year, month, day) VALUES({data['image']}, {data['link']}, {data['source']}, {data['summary']}, {data['title']}, {data['time']['year']}, {data['time']['month']}, {data['time']['day']})")
+                    self.cursor.execute("INSERT INTO data (image, link, source, summary, title, year, month, day) VALUES(:a, :b, :c, :d, :e, :f, :g, :h)", {'a': data['image'], 'b': data['link'], 'c': data['source'],'d': data['summary'],'e': data['title'], 'f': data['time']['year'], 'g': data['time']['month'], 'h': data['time']['day']})
                     # Write to SQLLite db
         except Exception as e:
             raise RuntimeError(e)

@@ -1,2 +1,3 @@
+apsw
 feedparser==5.2.1
 webpreview==1.6.0

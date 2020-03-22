@@ -20,7 +20,7 @@ class GetAddNews(object):
         self.day = now.day
         conn = apsw.Connection("data.sqlite")
         self.cursor = conn.cursor()
-        self.cursor.execute("CREATE TABLE data (id INT NOT NULL AUTO_INCREMENT, image VARCHAR(100), link VARCHAR(100), source VARCHAR(30), summary VARCHAR(300), title VARCHAR(100), year INT, month INT, day INT, PRIMARY KEY (id))")
+        self.cursor.execute("CREATE TABLE data (id INT NOT NULL IDENTITY(1, 1), image VARCHAR(100), link VARCHAR(100), source VARCHAR(30), summary VARCHAR(300), title VARCHAR(100), year INT, month INT, day INT, PRIMARY KEY (id))")
 
 
     def _write_to_dynamo_from_queue(self, final_q):
@@ -34,7 +34,7 @@ class GetAddNews(object):
                     # Notify Caesar Lambda
                     return
                 else:
-                    self.cursor.execute(f"INSERT INTO data VALUES({data['image']}, {data['link']}, {data['source']}, {data['summary']}, {data['title']}, {data['time']['year']}, {data['time']['month']}, {data['time']['day']})")
+                    self.cursor.execute(f"INSERT INTO data (image, link, source, summary, title, year, month, day) VALUES({data['image']}, {data['link']}, {data['source']}, {data['summary']}, {data['title']}, {data['time']['year']}, {data['time']['month']}, {data['time']['day']})")
                     # Write to SQLLite db
         except Exception as e:
             raise RuntimeError(e)

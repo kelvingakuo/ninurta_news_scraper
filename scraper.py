@@ -19,8 +19,8 @@ class GetAddNews(object):
         self.month = now.month
         self.day = now.day
         conn = apsw.Connection("data.sqlite")
-        this.cursor = conn.cursor()
-        this.cursor.execute("CREATE TABLE data (id INT NOT NULL PRIMARY KEY AUTO INCREMENT, image VARCHAR(100), link VARCHAR(100), source VARCHAR(30), summary VARCHAR(300), title VARCHAR(100), year INT, month INT, day INT)")
+        self.cursor = conn.cursor()
+        self.cursor.execute("CREATE TABLE data (id INT NOT NULL PRIMARY KEY AUTO INCREMENT, image VARCHAR(100), link VARCHAR(100), source VARCHAR(30), summary VARCHAR(300), title VARCHAR(100), year INT, month INT, day INT)")
 
 
     def _write_to_dynamo_from_queue(self, final_q):
@@ -34,7 +34,7 @@ class GetAddNews(object):
                     # Notify Caesar Lambda
                     return
                 else:
-                    this.cursor.execute(f"INSERT INTO data VALUES({data['image']}, {data['link']}, {data['source']}, {data['summary']}, {data['title']}, {data['time']['year']}, {data['time']['month']}, {data['time']['day']})")
+                    self.cursor.execute(f"INSERT INTO data VALUES({data['image']}, {data['link']}, {data['source']}, {data['summary']}, {data['title']}, {data['time']['year']}, {data['time']['month']}, {data['time']['day']})")
                     # Write to SQLLite db
         except Exception as e:
             raise RuntimeError(e)

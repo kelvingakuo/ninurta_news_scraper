@@ -24,7 +24,7 @@ class GetAddNews(object):
         self.cursor.execute("DELETE FROM data")
 
 
-    def _write_to_dynamo_from_queue(self, final_q):
+    def _write_to_db_from_queue(self, final_q):
         try:
             work = True
             
@@ -33,11 +33,19 @@ class GetAddNews(object):
                 if(data is None):
                     work = False
                     # Notify Caesar Lambda
+                    url = "https://c72b7oi5gk.execute-api.us-east-1.amazonaws.com/beta"
+                    requests.post(url, {
+                        data = {"success": True, "message": "Scrape complete"}
+                    })
                     return
                 else:
                     self.cursor.execute("INSERT INTO data (image, link, source, summary, title, year, month, day) VALUES(:a, :b, :c, :d, :e, :f, :g, :h)", {'a': data['image'], 'b': data['link'], 'c': data['source'],'d': data['summary'],'e': data['title'], 'f': data['time']['year'], 'g': data['time']['month'], 'h': data['time']['day']})
                     # Write to SQLLite db
         except Exception as e:
+            url = "https://c72b7oi5gk.execute-api.us-east-1.amazonaws.com/beta"
+            requests.post(url, {
+                data = {"success": True, "message": f"An error occured -> {e}"}
+            })
             raise RuntimeError(e)
 
     def _get_article_image(self, article_q, final_q):
@@ -93,7 +101,7 @@ class GetAddNews(object):
         img_thread = threading.Thread(target = self._get_article_image, args = (self.articles_queue, self.full_article_queue, ))
         img_thread.start()
 
-        writer_thread = threading.Thread(target = self._write_to_dynamo_from_queue, args = (self.full_article_queue, ))
+        writer_thread = threading.Thread(target = self._write_to_db_from_queue, args = (self.full_article_queue, ))
         writer_thread.start()
 
         agrix_content = feedparser.parse(self.standard_agrix)
